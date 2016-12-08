@@ -24,6 +24,12 @@ app.get('/todos', function (req, res) {
 		filteredTodos = _.where(filteredTodos, {completed: false});
 	}
 
+	if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {	// q is just the query term
+		filteredTodos = _.filter(filteredTodos, function (todo) {
+			return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) > -1;	// toLowerCase() removes the need to capitalise/lower case search term (a method available on any string)
+		});
+	}
+
 	res.json(filteredTodos);	// built in thing that removes need to do stringify or parse
 });
 
