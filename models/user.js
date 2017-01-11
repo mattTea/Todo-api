@@ -48,7 +48,3 @@ module.exports = function (sequelize, DataTypes) {
 		}
 	});
 }
-
-
-// app.post('/partners', function(req, res) {
-//     var body = _.pick(req.body, 'email', 'name', 'position', 'office');
