@@ -135,7 +135,27 @@ app.post('/users/login', function (req, res) {
 		return res.status(400).send();
 	}
 
-	res.json(body);
+	// 	return Todo.findAll({
+	// 		where: {
+	// 			description: {
+	// 				$like: '%Office%'	// capitalisation not important when using $like
+	// 			}
+	// 		}
+	// 	});
+
+	db.user.findOne({
+		where: {
+			email: body.email
+		}
+	}).then(function (user) {
+		if (!user) {
+			return res.status(401).send();
+		}
+
+		res.json(user.toJSON());
+	}, function (e) {
+		res.status(500).send();
+	});
 });
 
 
