@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
 var db = require('./db.js');
+var bcrypt = require('bcryptjs');
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -131,35 +132,14 @@ app.post('/users', function (req, res) {
 app.post('/users/login', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
-	if (typeof body.email !== 'string' || typeof body.password !== 'string') {
-		return res.status(400).send();
-	}
-
-	// 	return Todo.findAll({
-	// 		where: {
-	// 			description: {
-	// 				$like: '%Office%'	// capitalisation not important when using $like
-	// 			}
-	// 		}
-	// 	});
-
-	db.user.findOne({
-		where: {
-			email: body.email
-		}
-	}).then(function (user) {
-		if (!user) {
-			return res.status(401).send();
-		}
-
-		res.json(user.toJSON());
-	}, function (e) {
-		res.status(500).send();
+	db.user.authenticate(body).then(function (user) {	//if gone well return user
+		res.json(user.toPublicJSON());
+	}, function () {
+		res.status(401).send();		//don't want to give much away if login is incorrect
 	});
 });
 
-
-db.sequelize.sync().then(function() {
+db.sequelize.sync({force: true}).then(function() {
 	app.listen(PORT, function() {
 		console.log('Express listening on port ' + PORT + '!');
 	});
