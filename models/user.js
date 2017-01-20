@@ -3,7 +3,7 @@ var _ = require('underscore');
 var cryptojs = require('crypto-js');
 var jwt = require('jsonwebtoken');
 
-module.exports = function (sequelize, DataTypes) {
+module.exports = function(sequelize, DataTypes) {
 	var user = sequelize.define('user', {
 		email: {
 			type: DataTypes.STRING,
@@ -25,26 +25,26 @@ module.exports = function (sequelize, DataTypes) {
 			validate: {
 				len: [7, 100]
 			},
-			set: function (value) {		// set password with the value of the password
+			set: function(value) { // set password with the value of the password
 				var salt = bcrypt.genSaltSync(10);
 				var hashedPassword = bcrypt.hashSync(value, salt);
 
-				this.setDataValue('password', value);	// password still won't be stored in the db as it's a virtual DataType
-				this.setDataValue('salt', salt);		// but now the salt will be stored in the db (so we can log users in)
+				this.setDataValue('password', value); // password still won't be stored in the db as it's a virtual DataType
+				this.setDataValue('salt', salt); // but now the salt will be stored in the db (so we can log users in)
 				this.setDataValue('password_hash', hashedPassword);
 			}
 		}
 	}, {
 		hooks: {
-			beforeValidate: function (user, options) {
+			beforeValidate: function(user, options) {
 				if (typeof user.email === 'string') {
 					user.email = user.email.toLowerCase();
 				}
 			}
 		},
 		classMethods: {
-			authenticate: function (body) {
-				return new Promise(function (resolve, reject) {
+			authenticate: function(body) {
+				return new Promise(function(resolve, reject) {
 					if (typeof body.email !== 'string' || typeof body.password !== 'string') {
 						return reject();
 					}
@@ -63,20 +63,44 @@ module.exports = function (sequelize, DataTypes) {
 						reject();
 					});
 				});
+			},
+			findByToken: function(token) {
+				return new Promise(function(resolve, reject) {
+					try {
+						var decodedJWT = jwt.verify(token, 'qwerty098');
+						var bytes = cryptojs.AES.decrypt(decodedJWT.token, 'abc123!"£');
+						var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8));
+
+						user.findById(tokenData.id).then(function (user) {
+							if (user) {
+								resolve(user);
+							} else {
+								reject();
+							}
+						}, function (e) {
+							reject();
+						});
+					} catch (e) {
+						reject();
+					}
+				});
 			}
 		},
 		instanceMethods: {
-			toPublicJSON: function () {
+			toPublicJSON: function() {
 				var json = this.toJSON();
 				return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt');
 			},
-			generateToken: function (type) {
+			generateToken: function(type) {
 				if (!_.isString(type)) {
 					return undefined;
 				}
 
 				try {
-					var stringData = JSON.stringify({id: this.get('id'), type: type}); //creates a string as AES can only encrypt a string
+					var stringData = JSON.stringify({
+						id: this.get('id'),
+						type: type
+					}); //creates a string as AES can only encrypt a string
 					var encryptedData = cryptojs.AES.encrypt(stringData, 'abc123!"£').toString(); //second argument is secret passphrase
 					var token = jwt.sign({
 						token: encryptedData
